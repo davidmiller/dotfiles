@@ -20,6 +20,7 @@ class Dotfiles:
 
     def add( self ):
         """ Start tracking a dotfile """
+        add_logger.debug( 'Adding ' + self.args.file )
         if not os.path.isdir( self.dotfiles_dir ):
             add_logger.debug( 'No .dotfiles dir' )
             self.init()
