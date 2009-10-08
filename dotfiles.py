@@ -3,6 +3,7 @@
 import logging
 import os
 import re
+import shutil
 import sqlite3
 import subprocess
 import StringIO
@@ -100,6 +101,11 @@ and filename are correct and try again'
                            VALUES( NULL, ?, ?, ? )""", insert_values)
         self.conn.commit()
 
+        # relocate original file
+        shutil.move( file_loc, self.dotfiles_dir )
+        os.symlink( os.path.join( self.dotfiles_dir, file_name ) , file_loc )
+
+
     
     def sync( self ):
         """ Syncs existing tracked dotfiles """
@@ -131,6 +137,7 @@ and filename are correct and try again'
         pubkey_fh.close()
         
         self.dotfiles_dir = os.path.join( home, '.dotfiles' )
+        init_logger.debug( 'dotfiles_dir: ' + self.dotfiles_dir )
         self.repo_dir = os.path.join( self.dotfiles_dir, '.git' )
         if self.args.func:            
             fn = getattr( self, args.func )
