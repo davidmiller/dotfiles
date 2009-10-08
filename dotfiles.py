@@ -5,6 +5,7 @@ import os
 import sqlite3
 import subprocess
 import StringIO
+import sys
 import argparse
 
 class Dotfiles:
@@ -15,6 +16,7 @@ class Dotfiles:
         """ Initialise the dotfiles dir, repo, db """
         self.mk_dotfiles_dir()
         self.mk_repo()
+        self.mk_db()
         print """ Created .dotfiles directory, repo at ~/.dotfiles"""
         return True
 
@@ -30,16 +32,34 @@ class Dotfiles:
         self.cwd = os.getcwd()
         os.chdir( self.dotfiles_dir )
         gitout = StringIO.StringIO()
-        git_init_proc = subprocess.Popen( ['git', 'init'], stdout = subprocess.PIPE )
+        git_init_proc = subprocess.Popen( ['git', 'init'],
+                                          stdout = subprocess.PIPE )
         init_logger.debug( git_init_proc.stdout.read() )
+        ignore_fh = open( '.gitignore', 'wb' )
+        ignore_fh.write( 'dotfiles.db\n' )
+        ignore_fh.close()
+        git_add_args = ['git', 'add', '.' ]
+        git_add_proc = subprocess.Popen( git_add_args,
+                                            stdout = subprocess.PIPE )
+        init_logger.debug( git_add_proc.stdout.read() )                           
+        git_commit_args = [ 'git', 'commit', '-a' , '-m',
+                           'Initial Commit']
+        git_commit_proc = subprocess.Popen( git_commit_args,
+                                            stdout = subprocess.PIPE )
+        init_logger.debug( git_commit_proc.stdout.read() )
         return os.path.isdir( self.repo_dir )
 
 
     def mk_db( self ):
         """ Create the dotfiles database """
+        self.db_conn()
         self.c.execute(''' create table files
-                           ( name text, mod text, version, real,
-                             origin, text ) ''')
+                           ( file_id INTEGER PRIMARY KEY, host_id real, name text,
+                              mod text, version, real, origin, text ) ''')
+        self.c.execute(''' create table hosts
+                           ( host_id INTEGER PRIMARY KEY, pubkey text ) ''')
+        self.c.execute(""" insert into hosts( host_id, pubkey )
+                           VALUES( NULL, '""" + self.pubkey + "' )" )
         self.conn.commit()
         self.c.close()
 
@@ -59,15 +79,32 @@ class Dotfiles:
         print 'SYNC'
 
 
+    def db_conn( self ):
+        """ Connects to the database & stores cursor """
+        db_loc = os.path.join( self.dotfiles_dir, 'dotfiles.db' )
+        init_logger.debug( 'Database location: ' + db_loc )
+        self.conn = sqlite3.connect( db_loc )
+        self.c = self.conn.cursor()        
+
+
     def __init__( self, args=None ):
         """ Constructs the dotfiles Class """
         self.args = args
         home = os.environ['HOME']
-        dotfiles_dir = os.path.join( home, '.dotfiles' )
-        self.dotfiles_dir = dotfiles_dir
+        pubkey_loc = os.path.join( home, '.ssh/id_dsa.pub' )
+        # Check for required elements
+        if not os.path.isfile( pubkey_loc ):
+            print """No Public Key found at ~/.ssh/id_dsa.pub either specify
+            alternate Public Key location with --public-key or generate one
+            with ssh-keygen -t dsa"""
+            sys.exit()
+
+        pubkey_fh = open( pubkey_loc )
+        self.pubkey = pubkey_fh.read()
+        pubkey_fh.close()
+        
+        self.dotfiles_dir = os.path.join( home, '.dotfiles' )
         self.repo_dir = os.path.join( self.dotfiles_dir, '.git' )
-        self.conn = sqlite3.connect( 'dotfiles.db' )
-        self.c = self.conn.cursor()
         if self.args.func:            
             fn = getattr( self, args.func )
             fn()
