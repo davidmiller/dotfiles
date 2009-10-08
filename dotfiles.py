@@ -15,6 +15,8 @@ class Dotfiles:
         """ Initialise the dotfiles dir, repo, db """
         self.mk_dotfiles_dir()
         self.mk_repo()
+        print """ Created .dotfiles directory, repo at ~/.dotfiles"""
+        return True
 
 
     def mk_dotfiles_dir( self ):
@@ -31,6 +33,15 @@ class Dotfiles:
         git_init_proc = subprocess.Popen( ['git', 'init'], stdout = subprocess.PIPE )
         init_logger.debug( git_init_proc.stdout.read() )
         return os.path.isdir( self.repo_dir )
+
+
+    def mk_db( self ):
+        """ Create the dotfiles database """
+        self.c.execute(''' create table files
+                           ( name text, mod text, version, real,
+                             origin, text ) ''')
+        self.conn.commit()
+        self.c.close()
 
     
     def add( self ):
@@ -55,6 +66,8 @@ class Dotfiles:
         dotfiles_dir = os.path.join( home, '.dotfiles' )
         self.dotfiles_dir = dotfiles_dir
         self.repo_dir = os.path.join( self.dotfiles_dir, '.git' )
+        self.conn = sqlite3.connect( 'dotfiles.db' )
+        self.c = self.conn.cursor()
         if self.args.func:            
             fn = getattr( self, args.func )
             fn()
