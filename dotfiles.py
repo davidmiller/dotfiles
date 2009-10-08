@@ -71,7 +71,21 @@ class Dotfiles:
             add_logger.debug( 'No .dotfiles dir' )
             self.init()
         else:
-            add_logger.debug( 'Found .dotfiles dir' )
+            add_logger.debug( ' Found .dotfiles dir' )
+            try:
+                file_loc = os.path.join ( os.getcwd(), self.args.file )
+                file = os.path.isfile( file_loc )
+                add_logger.debug( self.args.file + ' found in current dir' )
+            except IOError:
+                try:
+                    file_loc = os.path.join( os.environ['HOME'], self.args.file )
+                    file = os.path.isfile( file_loc )
+                    add_logger.debug( self.args.file + ' found in home dir' )
+                except IOError:
+                    print  self.args.file + ' not found - please check the location \
+and filename are correct and try again'
+                    sys.exit()
+                    
 
     
     def sync( self ):
