@@ -2,6 +2,7 @@
 """ Syncs dotfiles across machines """
 import logging
 import os
+import re
 import sqlite3
 import subprocess
 import StringIO
@@ -54,8 +55,8 @@ class Dotfiles:
         """ Create the dotfiles database """
         self.db_conn()
         self.c.execute(''' create table files
-                           ( file_id INTEGER PRIMARY KEY, host_id real, name text,
-                              mod text, version, real, origin, text ) ''')
+                           ( file_id INTEGER PRIMARY KEY, host_id INTEGER, name text,
+                             origin, text ) ''')
         self.c.execute(''' create table hosts
                            ( host_id INTEGER PRIMARY KEY, pubkey text ) ''')
         self.c.execute(""" insert into hosts( host_id, pubkey )
@@ -67,25 +68,37 @@ class Dotfiles:
     def add( self ):
         """ Start tracking a dotfile """
         add_logger.debug( 'Adding ' + self.args.file )
+
+        # Locate the file
         if not os.path.isdir( self.dotfiles_dir ):
             add_logger.debug( 'No .dotfiles dir' )
             self.init()
         else:
-            add_logger.debug( ' Found .dotfiles dir' )
-            try:
-                file_loc = os.path.join ( os.getcwd(), self.args.file )
-                file = os.path.isfile( file_loc )
-                add_logger.debug( self.args.file + ' found in current dir' )
-            except IOError:
-                try:
-                    file_loc = os.path.join( os.environ['HOME'], self.args.file )
-                    file = os.path.isfile( file_loc )
+            add_logger.debug( 'Found .dotfiles dir' )
+            if os.path.isfile( self.args.file ):
+                if self.args.file[:1] == '/':
+                    file_loc = self.args.file
+                else:
+                    file_loc = os.path.join ( os.getcwd(), self.args.file )
+            else:                
+                file_loc = os.path.join( os.environ['HOME'], self.args.file )
+                if os.path.isfile( file_loc ):                    
                     add_logger.debug( self.args.file + ' found in home dir' )
-                except IOError:
+                else:
                     print  self.args.file + ' not found - please check the location \
 and filename are correct and try again'
                     sys.exit()
-                    
+
+        # store the file in the database            
+        file_name_RE = re.compile( r'^.+/(.+)$' )
+        file_name = file_name_RE.search( file_loc ).groups()[0]
+        self.db_conn()
+        host_sql = "select host_id from hosts where pubkey = '" + self.pubkey + "'"
+        host_id = int( self.c.execute( host_sql ).fetchall()[0][0] )
+        insert_values = ( host_id, file_name, file_loc ) 
+        self.c.execute(""" insert into files (file_id, host_id, name, origin)
+                           VALUES( NULL, ?, ?, ? )""", insert_values)
+        self.conn.commit()
 
     
     def sync( self ):
