@@ -9,6 +9,7 @@ import subprocess
 import StringIO
 import sys
 import argparse
+from github2.client import Github
 
 class Dotfiles:
     """ Main Dotfiles class """
@@ -16,10 +17,16 @@ class Dotfiles:
 
     def init( self ):
         """ Initialise the dotfiles dir, repo, db """
+        self.git_user = raw_input( 'Github Username: ' )
+        self.git_token = raw_input( 'Github API Token: ' )
         self.mk_dotfiles_dir()
         self.mk_repo()
         self.mk_db()
         print """ Created .dotfiles directory, repo at ~/.dotfiles"""
+        github = Github( username = self.git_user,
+                         api_token = self.git_token )
+        new_repo = github.repos.create( 'dotfiles_sync', 'dotfiles_sync',
+                                        'www.example.com', public = True )
         return True
 
 
@@ -55,13 +62,16 @@ class Dotfiles:
     def mk_db( self ):
         """ Create the dotfiles database """
         self.db_conn()
-        self.c.execute(''' create table files
+        self.c.execute( ''' create table files
                            ( file_id INTEGER PRIMARY KEY, host_id INTEGER, name text,
                              origin, text ) ''')
-        self.c.execute(''' create table hosts
+        self.c.execute( ''' create table hosts
                            ( host_id INTEGER PRIMARY KEY, pubkey text ) ''')
-        self.c.execute(""" insert into hosts( host_id, pubkey )
-                           VALUES( NULL, '""" + self.pubkey + "' )" )
+        self.c.execute( 'create table github ( user text, token text )' )
+        self.c.execute( """ insert into hosts( host_id, pubkey )
+                            VALUES( NULL, '""" + self.pubkey + "')" )
+        self.c.execute( """ insert into github ( user, token )
+                            VALUES ( ?, ?) """, ( self.git_user, self.git_token ) )
         self.conn.commit()
         self.c.close()
 
@@ -104,7 +114,6 @@ and filename are correct and try again'
         # relocate original file
         shutil.move( file_loc, self.dotfiles_dir )
         os.symlink( os.path.join( self.dotfiles_dir, file_name ) , file_loc )
-
 
     
     def sync( self ):
