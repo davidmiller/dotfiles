@@ -2,7 +2,7 @@
 """ Syncs dotfiles across machines """
 import logging
 import os
-import re
+import re                      
 import shutil
 import sqlite3
 import subprocess
@@ -17,16 +17,14 @@ class Dotfiles:
 
     def init( self ):
         """ Initialise the dotfiles dir, repo, db """
-        self.git_user = raw_input( 'Github Username: ' )
-        self.git_token = raw_input( 'Github API Token: ' )
         self.mk_dotfiles_dir()
         self.mk_repo()
         self.mk_db()
         print """ Created .dotfiles directory, repo at ~/.dotfiles"""
-        github = Github( username = self.git_user,
-                         api_token = self.git_token )
-        new_repo = github.repos.create( 'dotfiles_sync', 'dotfiles_sync',
-                                        'www.example.com', public = True )
+        repo_args = [ 'repo' '-i', 'r', 'dotfiles']
+        repo_proc = subprocess.Popen( stdout = subprocess.PIPE )
+        # This is where we create the remote repo
+        init_logger.debug( repo_proc.stdout.read() )
         return True
 
 
