@@ -9,7 +9,7 @@ import subprocess
 import StringIO
 import sys
 import argparse
-from github2.client import Github
+
 
 class Dotfiles:
     """ Main Dotfiles class """
@@ -21,10 +21,11 @@ class Dotfiles:
         self.mk_repo()
         self.mk_db()
         print """ Created .dotfiles directory, repo at ~/.dotfiles"""
-        repo_args = [ 'repo' '-i', 'r', 'dotfiles']
+        # This is where we create the local & remote repositories.
+        # commit & push to the remote via the repo ruby program
+        repo_args = [ 'repo' '--init', 'mydotfiles']
         repo_proc = subprocess.Popen( stdout = subprocess.PIPE )
-        # This is where we create the remote repo
-        init_logger.debug( repo_proc.stdout.read() )
+        init_logger.debug( repo_proc.stdout.read() )        
         return True
 
 
@@ -38,13 +39,17 @@ class Dotfiles:
         """ Creates the dotfiles git repo """        
         self.cwd = os.getcwd()
         os.chdir( self.dotfiles_dir )
+        
+        # This stuff now probably not needed
         gitout = StringIO.StringIO()
         git_init_proc = subprocess.Popen( ['git', 'init'],
                                           stdout = subprocess.PIPE )
         init_logger.debug( git_init_proc.stdout.read() )
+        # But repo.rb doesn't do gitignore adds 
         ignore_fh = open( '.gitignore', 'wb' )
         ignore_fh.write( 'dotfiles.db\n' )
         ignore_fh.close()
+        # Although it should
         git_add_args = ['git', 'add', '.' ]
         git_add_proc = subprocess.Popen( git_add_args,
                                             stdout = subprocess.PIPE )
@@ -182,35 +187,17 @@ if __name__ == '__main__':
 
 
     #  Define logging behaviour
-    LOG_FILENAME = '.dotfiles.log'
-    if args.debug:
-        console_level = logging.DEBUG
-    else:
-        console_level = logging.ERROR
 
-    add_logger = logging.getLogger( 'add' )
+    LOG_FILENAME = '.dotfiles.log'
+    add_logger = genlog.gen_log( 'add', LOG_FILENAME )    
+
     sync_logger = logging.getLogger( 'sync' )
     init_logger = logging.getLogger( 'init' )    
-
-    logformat = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    formatter = logging.Formatter( logformat )
-
-    add_logger.setLevel( logging.DEBUG )
     sync_logger.setLevel( logging.DEBUG )
     init_logger.setLevel( logging.DEBUG )
-    
-    file_handler = logging.FileHandler( LOG_FILENAME )
-    file_handler.setFormatter( formatter )
-    file_handler.setLevel( logging.ERROR )
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter( formatter )
-    console_handler.setLevel( console_level )
-
-    add_logger.addHandler( file_handler )
     init_logger.addHandler( file_handler )
     sync_logger.addHandler( file_handler )
     init_logger.addHandler( console_handler )
-    add_logger.addHandler( console_handler )    
     sync_logger.addHandler( console_handler )
 
     #Initialise the object
