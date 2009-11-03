@@ -117,8 +117,8 @@ and filename are correct and try again'
         os.chdir( self.dotfiles_dir )
         add_args = ['repo', 'add', '.']
         commit_args = ['repo', 'commit', "'adding %s'" % file_name ]
-        ac_proc = subp( ac_args )
-        add_logger.debug( ac_proc['stdout'] )
+        add_proc = subp( add_args )
+        add_logger.debug( add_proc['stdout'] )
         commit_proc = subp( commit_args )
         add_logger.debug( commit_proc['stdout'] )
         return True
