@@ -10,6 +10,17 @@ import StringIO
 import sys
 import argparse
 
+def subp( cmd ):
+    """ Executes a command, returns stdout"""
+    proc = subprocess.Popen( cmd,
+                             stdout = subprocess.PIPE,
+                             stderr = subprocess.PIPE
+                             )
+    return { 
+             'stdout': proc.stdout.read(),
+             'stderr': proc.stderr.read()
+             }
+
 
 class Dotfiles:
     """ Main Dotfiles class """
@@ -41,11 +52,8 @@ class Dotfiles:
         init_logger.debug( 'cwd: ' + os.getcwd() )
         ignore = 'dotfiles.db'
         repo_args = [ 'repo', 'init', 'mydotfiles', '--ignore', ignore ]
-        repo_proc = subprocess.Popen( repo_args,
-                                      stdout = subprocess.PIPE,
-                                      stderr = subprocess.PIPE
-                                     )
-        init_logger.debug( repo_proc.stdout.read() )        
+        repo_proc = subp( repo_args )
+        init_logger.debug( repo_proc['stdout'] )        
         return os.path.isdir( self.repo_dir )
 
 
@@ -107,14 +115,12 @@ and filename are correct and try again'
 
         # add & commit the new file
         os.chdir( self.dotfiles_dir )
-        ac_args = ['repo', 'add', '.', 
-                   '&&', 
-                   'repo', 'commit', "'adding %s'" % file_name ]
-        print ac_args
-        ac_proc = subprocess.Popen( ac_args, 
-                                    stdout = subprocess.PIPE, 
-                                    stderr = subprocess.PIPE)
-        add_logger.debug( ac_proc.stdout.read() )
+        add_args = ['repo', 'add', '.']
+        commit_args = ['repo', 'commit', "'adding %s'" % file_name ]
+        ac_proc = subp( ac_args )
+        add_logger.debug( ac_proc['stdout'] )
+        commit_proc = subp( commit_args )
+        add_logger.debug( commit_proc['stdout'] )
         return True
 
     
@@ -150,16 +156,11 @@ and filename are correct and try again'
 
         # Get the git user & token
         gconf_args = ['git', 'config', 'github.user']
-        user = subprocess.Popen( gconf_args ,
-                                 stdout = subprocess.PIPE 
-                                 )
+        user = subp( gconf_args )
         gtoke_args = ['git', 'config', 'github.token']
-        token = subprocess.Popen( 
-                                 gtoke_args,
-                                 stdout = subprocess.PIPE 
-                                 )
-        self.git_user = user.stdout.read().strip()
-        self.git_token = token.stdout.read().strip()
+        token = subp( gtoke_args )
+        self.git_user = user['stdout'].strip()
+        self.git_token = token['stdout'].strip()
         
         self.dotfiles_dir = os.path.join( home, '.dotfiles' )
         init_logger.debug( 'dotfiles_dir: ' + self.dotfiles_dir )
