@@ -51,7 +51,11 @@ class Dotfiles:
         os.chdir( self.dotfiles_dir )
         init_logger.debug( 'cwd: ' + os.getcwd() )
         ignore = 'dotfiles.db'
-        repo_args = [ 'repo', 'init', 'mydotfiles', '--ignore', ignore ]
+        repo_args = [ 'repo', 'init', 
+                      '--remote', 'mydotfiles',
+                      '--description',
+                      'A repository for syncing my dotfiles',
+                      '--ignore', ignore ]
         repo_proc = subp( repo_args )
         init_logger.debug( repo_proc['stdout'] )        
         return os.path.isdir( self.repo_dir )
