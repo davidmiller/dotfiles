@@ -110,7 +110,12 @@ and filename are correct and try again'
         ac_args = ['repo', 'add', '.', 
                    '&&', 
                    'repo', 'commit', "'adding %s'" % file_name ]
-        
+        print ac_args
+        ac_proc = subprocess.Popen( ac_args, 
+                                    stdout = subprocess.PIPE, 
+                                    stderr = subprocess.PIPE)
+        add_logger.debug( ac_proc.stdout.read() )
+        return True
 
     
     def sync( self ):
