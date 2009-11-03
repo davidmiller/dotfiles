@@ -28,7 +28,7 @@ class Dotfiles:
 
     def mk_dotfiles_dir( self ):
         """ Creates the .dotfiles dir """
-        try
+        try:
             os.mkdir( self.dotfiles_dir )
         except OSError:
             print "dotfiles directory already exists, skipping"
@@ -38,9 +38,13 @@ class Dotfiles:
     def mk_repo( self ):
         """ Creates the dotfiles git repo """        
         os.chdir( self.dotfiles_dir )
+        init_logger.debug( 'cwd: ' + os.getcwd() )
         ignore = 'dotfiles.db'
-        repo_args = [ 'repo' 'init', 'mydotfiles', '--ignore', ignore ]
-        repo_proc = subprocess.Popen( repo_args, stdout = subprocess.PIPE )
+        repo_args = [ 'repo', 'init', 'mydotfiles', '--ignore', ignore ]
+        repo_proc = subprocess.Popen( repo_args,
+                                      stdout = subprocess.PIPE,
+                                      stderr = subprocess.PIPE
+                                     )
         init_logger.debug( repo_proc.stdout.read() )        
         return os.path.isdir( self.repo_dir )
 
@@ -101,6 +105,13 @@ and filename are correct and try again'
         shutil.move( file_loc, self.dotfiles_dir )
         os.symlink( os.path.join( self.dotfiles_dir, file_name ) , file_loc )
 
+        # add & commit the new file
+        os.chdir( self.dotfiles_dir )
+        ac_args = ['repo', 'add', '.', 
+                   '&&', 
+                   'repo', 'commit', "'adding %s'" % file_name ]
+        
+
     
     def sync( self ):
         """ Syncs existing tracked dotfiles """
@@ -131,6 +142,19 @@ and filename are correct and try again'
         pubkey_fh = open( pubkey_loc )
         self.pubkey = pubkey_fh.read()
         pubkey_fh.close()
+
+        # Get the git user & token
+        gconf_args = ['git', 'config', 'github.user']
+        user = subprocess.Popen( gconf_args ,
+                                 stdout = subprocess.PIPE 
+                                 )
+        gtoke_args = ['git', 'config', 'github.token']
+        token = subprocess.Popen( 
+                                 gtoke_args,
+                                 stdout = subprocess.PIPE 
+                                 )
+        self.git_user = user.stdout.read().strip()
+        self.git_token = token.stdout.read().strip()
         
         self.dotfiles_dir = os.path.join( home, '.dotfiles' )
         init_logger.debug( 'dotfiles_dir: ' + self.dotfiles_dir )
@@ -183,6 +207,11 @@ if __name__ == '__main__':
     console_handler = logging.StreamHandler()
     console_handler.setFormatter( formatter )
     console_handler.setLevel( logging.DEBUG )
+
+    add_logger = logging.getLogger( 'add' )
+    add_logger.setLevel( logging.DEBUG )
+    add_logger.addHandler( file_handler )
+    add_logger.addHandler( console_handler )
 
     sync_logger = logging.getLogger( 'sync' )
     init_logger = logging.getLogger( 'init' )    
