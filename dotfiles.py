@@ -18,47 +18,30 @@ class Dotfiles:
     def init( self ):
         """ Initialise the dotfiles dir, repo, db """
         self.mk_dotfiles_dir()
+        # This is where we create the local & remote repositories.
+        # commit & push to the remote via the repo ruby program
         self.mk_repo()
         self.mk_db()
         print """ Created .dotfiles directory, repo at ~/.dotfiles"""
-        # This is where we create the local & remote repositories.
-        # commit & push to the remote via the repo ruby program
-        repo_args = [ 'repo' '--init', 'mydotfiles']
-        repo_proc = subprocess.Popen( stdout = subprocess.PIPE )
-        init_logger.debug( repo_proc.stdout.read() )        
         return True
 
 
     def mk_dotfiles_dir( self ):
         """ Creates the .dotfiles dir """
-        os.mkdir( self.dotfiles_dir )
+        try
+            os.mkdir( self.dotfiles_dir )
+        except OSError:
+            print "dotfiles directory already exists, skipping"
         return os.path.isdir( self.dotfiles_dir )
 
 
     def mk_repo( self ):
         """ Creates the dotfiles git repo """        
-        self.cwd = os.getcwd()
         os.chdir( self.dotfiles_dir )
-        
-        # This stuff now probably not needed
-        gitout = StringIO.StringIO()
-        git_init_proc = subprocess.Popen( ['git', 'init'],
-                                          stdout = subprocess.PIPE )
-        init_logger.debug( git_init_proc.stdout.read() )
-        # But repo.rb doesn't do gitignore adds 
-        ignore_fh = open( '.gitignore', 'wb' )
-        ignore_fh.write( 'dotfiles.db\n' )
-        ignore_fh.close()
-        # Although it should
-        git_add_args = ['git', 'add', '.' ]
-        git_add_proc = subprocess.Popen( git_add_args,
-                                            stdout = subprocess.PIPE )
-        init_logger.debug( git_add_proc.stdout.read() )                           
-        git_commit_args = [ 'git', 'commit', '-a' , '-m',
-                           'Initial Commit']
-        git_commit_proc = subprocess.Popen( git_commit_args,
-                                            stdout = subprocess.PIPE )
-        init_logger.debug( git_commit_proc.stdout.read() )
+        ignore = 'dotfiles.db'
+        repo_args = [ 'repo' 'init', 'mydotfiles', '--ignore', ignore ]
+        repo_proc = subprocess.Popen( repo_args, stdout = subprocess.PIPE )
+        init_logger.debug( repo_proc.stdout.read() )        
         return os.path.isdir( self.repo_dir )
 
 
@@ -134,6 +117,7 @@ and filename are correct and try again'
 
     def __init__( self, args=None ):
         """ Constructs the dotfiles Class """
+        self.cwd = os.getcwd()
         self.args = args
         home = os.environ['HOME']
         pubkey_loc = os.path.join( home, '.ssh/id_dsa.pub' )
@@ -189,7 +173,16 @@ if __name__ == '__main__':
     #  Define logging behaviour
 
     LOG_FILENAME = '.dotfiles.log'
-    add_logger = genlog.gen_log( 'add', LOG_FILENAME )    
+#    add_logger = genlog.gen_log( 'add', LOG_FILENAME )    
+
+    logformat = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    formatter = logging.Formatter( logformat )
+    file_handler = logging.FileHandler( LOG_FILENAME )
+    file_handler.setFormatter( formatter )
+    file_handler.setLevel( logging.ERROR )
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter( formatter )
+    console_handler.setLevel( logging.DEBUG )
 
     sync_logger = logging.getLogger( 'sync' )
     init_logger = logging.getLogger( 'init' )    
