@@ -6,7 +6,6 @@ import re
 import shutil
 import sqlite3
 import subprocess
-import StringIO
 import sys
 import argparse
 
@@ -63,19 +62,19 @@ class Dotfiles:
 
     def mk_db( self ):
         """ Create the dotfiles database """
-        self.db_conn()
-        self.c.execute( ''' create table files
+        self.cursor.execute( ''' create table files
                            ( file_id INTEGER PRIMARY KEY, host_id INTEGER, name text,
                              origin, text ) ''')
-        self.c.execute( ''' create table hosts
+        self.cursor.execute( ''' create table hosts
                            ( host_id INTEGER PRIMARY KEY, pubkey text ) ''')
-        self.c.execute( 'create table github ( user text, token text )' )
-        self.c.execute( """ insert into hosts( host_id, pubkey )
+        self.cursor.execute( 'create table github ( user text, token text )' )
+        self.cursor.execute( """ insert into hosts( host_id, pubkey )
                             VALUES( NULL, '""" + self.pubkey + "')" )
-        self.c.execute( """ insert into github ( user, token )
-                            VALUES ( ?, ?) """, ( self.git_user, self.git_token ) )
+        self.cursor.execute( """ insert into github ( user, token )
+                            VALUES ( ?, ?) """, 
+                        ( self.git_user, self.git_token ) )
         self.conn.commit()
-        self.c.close()
+        self.cursor.close()
 
     
     def add( self ):
@@ -98,18 +97,18 @@ class Dotfiles:
                 if os.path.isfile( file_loc ):                    
                     add_logger.debug( self.args.file + ' found in home dir' )
                 else:
-                    print  self.args.file + ' not found - please check the location \
-and filename are correct and try again'
+                    print  self.args.file + """ not found:
+please check the location and filename are correct and try again"""
                     sys.exit()
 
         # store the file in the database            
-        file_name_RE = re.compile( r'^.+/(.+)$' )
-        file_name = file_name_RE.search( file_loc ).groups()[0]
-        self.db_conn()
-        host_sql = "select host_id from hosts where pubkey = '" + self.pubkey + "'"
-        host_id = int( self.c.execute( host_sql ).fetchall()[0][0] )
+        file_name_re = re.compile( r'^.+/(.+)$' )
+        file_name = file_name_re.search( file_loc ).groups()[0]
+        host_sql = "select host_id from hosts where pubkey = '%s'" % self.pubkey
+        host_id = int( self.cursor.execute( host_sql ).fetchall()[0][0] )
         insert_values = ( host_id, file_name, file_loc ) 
-        self.c.execute(""" insert into files (file_id, host_id, name, origin)
+        self.cursor.execute(""" insert into files 
+                            (file_id, host_id, name, origin)
                            VALUES( NULL, ?, ?, ? )""", insert_values)
         self.conn.commit()
 
@@ -138,7 +137,7 @@ and filename are correct and try again'
         db_loc = os.path.join( self.dotfiles_dir, 'dotfiles.db' )
         init_logger.debug( 'Database location: ' + db_loc )
         self.conn = sqlite3.connect( db_loc )
-        self.c = self.conn.cursor()        
+        self.cursor = self.conn.cursor()        
 
 
     def __init__( self, args=None ):
@@ -165,21 +164,23 @@ and filename are correct and try again'
         token = subp( gtoke_args )
         self.git_user = user['stdout'].strip()
         self.git_token = token['stdout'].strip()
+
+        self.db_conn()
         
         self.dotfiles_dir = os.path.join( home, '.dotfiles' )
         init_logger.debug( 'dotfiles_dir: ' + self.dotfiles_dir )
         self.repo_dir = os.path.join( self.dotfiles_dir, '.git' )
         if self.args.func:            
-            fn = getattr( self, args.func )
-            fn()
+            func = getattr( self, args.func )
+            func()
 
 
 if __name__ == '__main__':
 
 
     # Set arguments
-    program = 'dotfiles'
-    parser = argparse.ArgumentParser( prog = program )
+    __program__ = 'dotfiles'
+    parser = argparse.ArgumentParser( prog = __program__ )
     parser.add_argument( '--debug',
                          action='store_true',
                          help='Turn on debugging notices')
@@ -190,7 +191,7 @@ if __name__ == '__main__':
     parser_init.set_defaults( func = 'init' )
 
     # Adding dotfiles commands
-    parser_add = subparsers.add_parser( 'add', help = 'Start tracking a dotfile' )
+    parser_add = subparsers.add_parser( 'add', help = 'Start tracking a file' )
     parser_add.add_argument( 'file',
                              help='Location of the flie to track' )
     parser_add.set_defaults( func = 'add' )
