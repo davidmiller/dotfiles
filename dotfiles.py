@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-""" Syncs dotfiles across machines """
+""" Syncs dotfiles across machines 
+Uses a Github account to store file versions & merge"""
 import logging
 import os
 import re                      
@@ -207,12 +208,12 @@ if __name__ == '__main__':
 
     #  Define logging behaviour
 
-    LOG_FILENAME = '.dotfiles.log'
-#    add_logger = genlog.gen_log( 'add', LOG_FILENAME )    
+    log_filename = '.dotfiles.log'
+#    add_logger = genlog.gen_log( 'add', log_filename )    
 
     logformat = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     formatter = logging.Formatter( logformat )
-    file_handler = logging.FileHandler( LOG_FILENAME )
+    file_handler = logging.FileHandler( log_filename )
     file_handler.setFormatter( formatter )
     file_handler.setLevel( logging.ERROR )
     console_handler = logging.StreamHandler()
