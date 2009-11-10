@@ -43,6 +43,7 @@ class Dotfiles:
 
     def mk_dotfiles_dir( self ):
         """ Creates the .dotfiles dir """
+        print 'wtf'
         try:
             os.mkdir( self.dotfiles_dir )
         except OSError:
@@ -137,11 +138,19 @@ please check the location and filename are correct and try again"""
     
     def sync( self ):
         """ Syncs existing tracked dotfiles """
-        print 'SYNC'
+        os.chdir( self.dotfiles_dir )        
+        status = subp( ['git', 'status'] )
+        if status['stdout'].find( 'modified:' ) != -1:
+            subp( ['repo', 'commit', 'Auto-Sync of changes' ] )
+            subp( ['git', 'pull', 'origin', 'master' ] )
+            subp( ['repo', 'push' ] )
+                  
 
 
     def db_conn( self ):
         """ Connects to the database & stores cursor """
+        if self.args.func == 'init':
+            self.mk_dotfiles_dir()
         db_loc = os.path.join( self.dotfiles_dir, 'dotfiles.db' )
         init_logger.debug( 'Database location: ' + db_loc )
         self.conn = sqlite3.connect( db_loc )
