@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 """ Syncs dotfiles across machines 
 Uses a Github account to store file versions & merge"""
+
+# Todo Sync into cron & check for existing remote
+
+
 import logging
 import os
 import re                      
@@ -121,10 +125,13 @@ please check the location and filename are correct and try again"""
         os.chdir( self.dotfiles_dir )
         add_args = ['repo', 'add', '.']
         commit_args = ['repo', 'commit', "adding %s" % file_name ]
+        push_args = ['repo', 'push']
         add_proc = subp( add_args )
         add_logger.debug( add_proc['stdout'] )
         commit_proc = subp( commit_args )
         add_logger.debug( commit_proc['stdout'] )
+        push_proc = subp( push_args )
+        add_logger.debug( push_proc['stdout'] )
         return True
 
     
@@ -166,10 +173,12 @@ please check the location and filename are correct and try again"""
         self.git_user = user['stdout'].strip()
         self.git_token = token['stdout'].strip()
 
-        self.db_conn()
-        
         self.dotfiles_dir = os.path.join( home, '.dotfiles' )
         init_logger.debug( 'dotfiles_dir: ' + self.dotfiles_dir )
+
+        self.db_conn()
+    
+
         self.repo_dir = os.path.join( self.dotfiles_dir, '.git' )
         if self.args.func:            
             func = getattr( self, args.func )
